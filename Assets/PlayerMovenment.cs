@@ -8,56 +8,70 @@ public class PlayerMovenment : MonoBehaviour
     private float playerSpeed = 5.5f;
     private float jumpStrength = 8f;
 
+    private float horizontalMovement;
+
+
     bool facingRight;
-    bool jumping;
-    float horizontalMovenment;
+    bool jumping = false;
+    float jumpCount = 0;
+
     private Rigidbody2D playerRigidBody;
 
     Vector3 velocityZero = Vector3.zero;
 
-    // Assigns player rigid body to RigidBody2d of component when loaded
     void Awake()
     {
+
+        // Assigns player rigid body to RigidBody2d of component when loaded
+
         playerRigidBody = GetComponent<Rigidbody2D>();
+
+        //creates safety check if playerRigidBody is not found
+        if (!playerRigidBody.TryGetComponent(out Rigidbody2D playerRigidbody))
+        {
+            Debug.LogError("Rigidbody2D component not found on the PlayerMovement script's GameObject.");
+        }
     }
 
     // Update is called once per frame
     void Update()
     {
-        horizontalMovenment = Input.GetAxisRaw("Horizontal") * playerSpeed;
+
+        //Horizontal movenment will be equal to negative or positive playerspeed
+        horizontalMovement = Input.GetAxisRaw("Horizontal") * playerSpeed;
         
+        //Checks for player jump which is used by the move character function
         if (Input.GetButtonDown("Jump"))
-        {
+      {
             jumping = true;
         }
-
-        
-
-
     }
 
     void FixedUpdate()
     {
-        //flips the character accordingly
-        Flip(horizontalMovenment);
 
-        moveCharacter(horizontalMovenment * Time.fixedDeltaTime, jumping);
+        moveCharacter(horizontalMovement, jumping);
+        if (playerRigidBody.velocity.y < 0)
+        {
+            //if player is falling, increase gravity scale
+            playerRigidBody.gravityScale = 4f;
 
+        } else if (playerRigidBody.velocity.y <= 0)
+        {
+            playerRigidBody.gravityScale = 2.5f;
+
+        }
+
+        //always set jumping to false after character moves
+        jumping = false;
     }
 
     //Allows player to flip directions
-    public void Flip(float horizontalMovenment)
+    public void Flip(float horizontalMovement)
     {
-        if (horizontalMovenment == 1)
-        {
-            facingRight = true;
-        } else if(horizontalMovenment == -1)
-        {
-            facingRight = false;
-        }
-
+        facingRight = horizontalMovement > 0;
         Vector3 theScale = transform.localScale;
-        theScale.x *= -1;
+        theScale.x = Mathf.Abs(theScale.x) * (facingRight ? 1 : -1);
         transform.localScale = theScale;
     }
 
@@ -68,9 +82,10 @@ public class PlayerMovenment : MonoBehaviour
         Vector3 targetVelocity = new Vector2(moveSpeed, playerRigidBody.velocity.y);
         playerRigidBody.velocity = Vector3.SmoothDamp(playerRigidBody.velocity, targetVelocity, ref velocityZero, 0.05f);
 
-        if(jump)
+        //if jumping is true, adds upward vector
+        if (jump && jumpCount<2)
         {
-            playerRigidBody.AddForce(new Vector2(0f, jumpStrength));
+            playerRigidBody.AddForce(new Vector2(0f, jumpStrength), ForceMode2D.Impulse);
         }
 
     }
